@@ -5,10 +5,9 @@ import {
   SimulatedCrew,
   Airport,
 } from '../types/network';
-import {
-  X,
-  Plane,
-} from 'lucide-react';
+import { X, Plane } from 'lucide-react';
+import { FlightTimingGrid } from './modal/FlightTimingGrid';
+import { FlightConnectionsList } from './modal/FlightConnectionsList';
 
 interface FlightModalProps {
   flightId: string | null;
@@ -27,7 +26,6 @@ export const FlightModal: React.FC<FlightModalProps> = ({
   crews,
   airports,
 }) => {
-  // Support Esc key to close
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
@@ -47,7 +45,6 @@ export const FlightModal: React.FC<FlightModalProps> = ({
 
   const crew = crews.find((c) => c.crew_id === flight.crewId);
 
-  // Connections involving this flight
   const inboundConns = connections.filter((c) => c.to_flight === flight.flight_id);
   const outboundConns = connections.filter((c) => c.from_flight === flight.flight_id);
 
@@ -97,61 +94,11 @@ export const FlightModal: React.FC<FlightModalProps> = ({
         {/* Modal Content */}
         <div className="p-4 space-y-4 overflow-y-auto">
           {/* Route & Times Grid */}
-          <div className="grid grid-cols-2 gap-3 text-xs font-mono">
-            {/* Origin */}
-            <div className="p-3 rounded bg-[#0d1322] border border-[#242a3a]">
-              <div className="text-[10px] text-[#869397] uppercase">ORIGIN STATION</div>
-              <div className="text-lg font-bold text-[#dde2f8] mt-0.5">
-                {flight.origin} ({originAirport?.city || ''})
-              </div>
-              <div className="mt-2 space-y-0.5 text-[11px]">
-                <div className="text-[#869397]">
-                  Sched Dep: <span className="text-[#dde2f8]">{flight.scheduledDepStr} IST</span>
-                </div>
-                <div className="text-[#869397]">
-                  Actual Dep:{' '}
-                  <span
-                    className={
-                      flight.status === 'CANCELLED'
-                        ? 'text-[#94a3b8] line-through'
-                        : flight.delayMinutes > 0
-                        ? 'text-[#f97316] font-bold'
-                        : 'text-[#10b981]'
-                    }
-                  >
-                    {flight.status === 'CANCELLED' ? 'Cancelled' : `${flight.actualDepStr} IST`}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Destination */}
-            <div className="p-3 rounded bg-[#0d1322] border border-[#242a3a]">
-              <div className="text-[10px] text-[#869397] uppercase">DESTINATION STATION</div>
-              <div className="text-lg font-bold text-[#dde2f8] mt-0.5">
-                {flight.destination} ({destAirport?.city || ''})
-              </div>
-              <div className="mt-2 space-y-0.5 text-[11px]">
-                <div className="text-[#869397]">
-                  Sched Arr: <span className="text-[#dde2f8]">{flight.scheduledArrStr} IST</span>
-                </div>
-                <div className="text-[#869397]">
-                  Actual Arr:{' '}
-                  <span
-                    className={
-                      flight.status === 'CANCELLED'
-                        ? 'text-[#94a3b8] line-through'
-                        : flight.delayMinutes > 0
-                        ? 'text-[#f97316] font-bold'
-                        : 'text-[#10b981]'
-                    }
-                  >
-                    {flight.status === 'CANCELLED' ? 'Cancelled' : `${flight.actualArrStr} IST`}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
+          <FlightTimingGrid
+            flight={flight}
+            originAirport={originAirport}
+            destAirport={destAirport}
+          />
 
           {/* Operational Status & Delay Breakdown */}
           <div className="p-3 rounded bg-[#0d1322] border border-[#242a3a] space-y-2 text-xs font-mono">
@@ -232,54 +179,11 @@ export const FlightModal: React.FC<FlightModalProps> = ({
           </div>
 
           {/* Connected Passengers Section */}
-          <div className="p-3 rounded bg-[#0d1322] border border-[#242a3a] space-y-2 text-xs font-mono">
-            <span className="text-[10px] text-[#869397] uppercase block">
-              PASSENGER CONNECTIONS AT HUBS ({inboundConns.length + outboundConns.length})
-            </span>
-
-            {inboundConns.length === 0 && outboundConns.length === 0 ? (
-              <div className="text-[11px] text-[#869397]">
-                No connecting itineraries scheduled through this flight.
-              </div>
-            ) : (
-              <div className="space-y-1.5">
-                {inboundConns.map((c) => (
-                  <div
-                    key={c.connection_id}
-                    className="p-2 rounded bg-[#151b2b] border border-[#242a3a] flex items-center justify-between text-[11px]"
-                  >
-                    <span>
-                      Inbound feeder: <strong>{c.from_flight}</strong> → {flight.flight_id} ({c.airport})
-                    </span>
-                    <span
-                      className={`font-bold ${
-                        c.status === 'MADE' ? 'text-[#10b981]' : 'text-[#ff817a]'
-                      }`}
-                    >
-                      {c.status} ({c.passengers} pax)
-                    </span>
-                  </div>
-                ))}
-                {outboundConns.map((c) => (
-                  <div
-                    key={c.connection_id}
-                    className="p-2 rounded bg-[#151b2b] border border-[#242a3a] flex items-center justify-between text-[11px]"
-                  >
-                    <span>
-                      Outbound connection: {flight.flight_id} → <strong>{c.to_flight}</strong> ({c.airport})
-                    </span>
-                    <span
-                      className={`font-bold ${
-                        c.status === 'MADE' ? 'text-[#10b981]' : 'text-[#ff817a]'
-                      }`}
-                    >
-                      {c.status} ({c.passengers} pax)
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+          <FlightConnectionsList
+            flightId={flight.flight_id}
+            inboundConns={inboundConns}
+            outboundConns={outboundConns}
+          />
         </div>
 
         {/* Modal Footer */}
